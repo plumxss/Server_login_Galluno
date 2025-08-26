@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const sharp = require('sharp');
 const saldos = require('../../models/saldos.model');
+const nodemailer = require('nodemailer'); // Agrega esto arriba
 
 const eliminarCentavos = (monto) => Math.floor(monto); // 10.99 -> 10
 
@@ -107,38 +108,71 @@ router.put('/change-password', async (req, res) => {
     }
 });
 router.post('/register', upload.single('file'), async (req, res) => {
+    console.log('Email recibido en registro:', req.body.email);
+    console.log('Body recibido:', req.body); // <-- Debe mostrar todos los campos
     try {
-        // Proceso de registro
+        // Elimina la validación de correo duplicado
+        // const emailExists = await User.findOne({ email: req.body.email });
+        // if (emailExists) {
+        //     return res.json({ error: "El correo electrónico ya está registrado" });
+        // }
+
+        // Verifica si el usuario ya existe
         const userExists = await User.findOne({ username: req.body.username });
         if (userExists) {
             return res.json({ data: "El nombre de usuario ya existe" });
         }
 
+        // Hashea la contraseña
         req.body.password = bcrypt.hashSync(req.body.password, 12);
 
         let pathFinal = null;
         if (req.file) {
             await helperImg(req.file.path, `resize-${req.file.filename}`);
             const path = `resize-${req.file.filename}`;
-
-            // Utilizamos split para obtener el nombre sin extensión y la extensión
-            const [nombreSinExtension, extension] = path.split('.');
-
-            // Construimos el nuevo nombre del archivo
+            const [nombreSinExtension] = path.split('.');
             pathFinal = `${nombreSinExtension}.png`;
         }
 
-        // Creamos el usuario con o sin imagen
-        const newUser = User({
+        // Genera el código de inicio de sesión
+        const loginCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Guarda el usuario
+        const newUser = new User({
             username: req.body.username,
             password: req.body.password,
-            image: pathFinal, // null si no hay imagen
+            email: req.body.email,
+            image: req.file ? req.file.filename : undefined,
             rol: req.body.tipoUsuario,
+            loginCode
+        });
+        await newUser.save();
+
+        // Envía el correo con el código
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: process.env.EMAIL_PORT,
+            secure: false,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
         });
 
-        await newUser.save();
-        return res.json({ data: "Usuario ingresado!" });
+        try {
+            const info = await transporter.sendMail({
+                from: `"Galluno" <${process.env.EMAIL_USER}>`,
+                to: req.body.email,
+                subject: "Código para iniciar sesión",
+                text: `Tu código de inicio de sesión es: ${loginCode}`
+            });
+            console.log('Correo enviado correctamente:', info);
+        } catch (mailError) {
+            console.error('Error enviando el correo:', mailError);
+            return res.json({ error: 'No se pudo enviar el correo. Verifica la configuración.' });
+        }
 
+        return res.json({ data: "Usuario registrado y código enviado al correo." });
     } catch (error) {
         return res.json({ error: error.message });
     }
@@ -558,6 +592,18 @@ router.post('/change-profile-photo/:username', upload.single('file'), async (req
         res.status(500).json({ error: error.message });
     }
 });
-
-
+router.post('/verificar-codigo', async (req, res) => {
+    const { email, codigo } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.json({ error: 'Usuario no encontrado' });
+    if (user.loginCode === codigo) {
+        return res.json({ success: true });
+    } else {
+        return res.json({ error: 'Código incorrecto' });
+    }
+});
+console.log('EMAIL_USER:', process.env.EMAIL_USER);
+console.log('EMAIL_PASS:', process.env.EMAIL_PASS);
+console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
+console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
 module.exports = router;
