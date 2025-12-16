@@ -498,7 +498,7 @@ router.get('/historialPorRondas/:username', async (req, res) => {
         };
       })
       .sort((a, b) => {
-        // Ordenar primero por fecha (más reciente primero), luego por ronda, luego por color
+        // Ordenar primero por fecha (más reciente primero), luego por  ronda, luego por color
         const fechaCompare = new Date(b.fecha) - new Date(a.fecha);
         if (fechaCompare !== 0) return fechaCompare;
         
