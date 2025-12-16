@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const apuestaModel = require('../../models/apuestas.model');
 const userModel = require('../../models/user.model');
+const Screenshot = require('../../models/screenshot.model');
 const eliminarCentavos = (monto) => Math.floor(monto); // 10.99 → 10
 
 router.get('/obtenerapuestas', async (req, res) => {
@@ -10,7 +11,7 @@ router.get('/obtenerapuestas', async (req, res) => {
 router.put('/repartirGanancias/:sala/:ronda/:ganador', async (req, res) => { 
   try {
     const sala = req.params.sala;
-    const ronda = Number(req.params.ronda); // Asegurar que sea un número
+    const ronda = Number(req.params.ronda); // Asegurar   que sea un número
     const ganador = req.params.ganador.toLowerCase(); // Convertir a minúsculas para evitar problemas de mayúsculas
 
     // Validar que el color ganador sea 'rojo' o 'verde'
@@ -497,7 +498,7 @@ router.get('/historialPorRondas/:username', async (req, res) => {
         };
       })
       .sort((a, b) => {
-        // Ordenar primero por fecha (más reciente primero), luego por ronda, luego por color
+        // Ordenar primero por fecha (más reciente primero), luego por  ronda, luego por color
         const fechaCompare = new Date(b.fecha) - new Date(a.fecha);
         if (fechaCompare !== 0) return fechaCompare;
         
