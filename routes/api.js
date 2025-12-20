@@ -14,4 +14,4 @@ router.use('/screenshot', require('./api/screenshot'));
 router.use('/ruleta', require('./api/ruleta'));
 router.use('/rifas', require('./api/rifa'));
 router.use('/corte-diario', require('./api/corteDiario'));
-module.exports = router;
+module.exports = router; 
